@@ -1,0 +1,152 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shape Grid Puzzle</title>
+  <style>
+    body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
+    .grid { display: grid; grid-template-columns: repeat(10, 50px); grid-gap: 5px; margin-top: 20px; }
+    .cell { width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; border: 1px solid #ccc; cursor: pointer; }
+    .selected { border: 2px solid black; }
+    .highlight-row { background-color: #e0f7fa; }
+    .highlight-col { background-color: #fce4ec; }
+    .target-sequence { margin: 10px; font-size: 20px; }
+    .symbol { font-size: 24px; }
+    .timer { margin: 10px; font-size: 18px; color: red; }
+    .controls { margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="target-sequence">Target Sequence: <span id="target-sequence"></span></div>
+  <div class="timer">Time Left: <span id="timer">60</span>s</div>
+  <div class="grid" id="grid"></div>
+  <div class="controls">
+    <label for="timeLimit">Set Timer (seconds): </label>
+    <input type="number" id="timeLimit" value="60" min="10" max="300">
+    <button onclick="restartGame()">Restart</button>
+  </div>
+  <script>
+    const symbols = ['🔵', '🔺', '🟥', '⭐', '⬣', '🟢'];
+    const targetLength = 8;
+    const rows = 7;
+    const cols = 10;
+    let targetSequence = [];
+    let currentStep = 0;
+    let lockRow = 0;
+    let lockCol = null;
+    let timerInterval;
+    let timeLeft;
+
+    function getRandomSymbol() {
+      return symbols[Math.floor(Math.random() * symbols.length)];
+    }
+
+    function generateTargetSequence() {
+      targetSequence = Array.from({ length: targetLength }, getRandomSymbol);
+      document.getElementById('target-sequence').textContent = targetSequence.join(' ');
+    }
+
+    function createGrid() {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const cell = document.createElement('div');
+          cell.classList.add('cell');
+          const symbol = getRandomSymbol();
+          cell.textContent = symbol;
+          cell.dataset.row = r;
+          cell.dataset.col = c;
+          cell.dataset.symbol = symbol;
+
+          grid.appendChild(cell);
+        }
+      }
+      updateHighlights();
+      addCellListeners();
+    }
+
+    function updateHighlights() {
+      const cells = document.querySelectorAll('.cell');
+      cells.forEach(cell => {
+        const row = parseInt(cell.dataset.row);
+        const col = parseInt(cell.dataset.col);
+        cell.classList.remove('highlight-row', 'highlight-col');
+        if (lockRow !== null && row === lockRow) {
+          cell.classList.add('highlight-row');
+        }
+        if (lockCol !== null && col === lockCol) {
+          cell.classList.add('highlight-col');
+        }
+      });
+    }
+
+    function addCellListeners() {
+      const cells = document.querySelectorAll('.cell');
+      cells.forEach(cell => {
+        cell.addEventListener('click', () => {
+          const row = parseInt(cell.dataset.row);
+          const col = parseInt(cell.dataset.col);
+          const symbol = cell.dataset.symbol;
+
+          if (cell.classList.contains('selected')) return;
+
+          if ((lockRow !== null && row === lockRow) ||
+              (lockCol !== null && col === lockCol)) {
+
+            cell.classList.add('selected');
+
+            if (symbol === targetSequence[currentStep]) {
+              currentStep++;
+              if (currentStep === targetLength) {
+                clearInterval(timerInterval);
+                alert('🎉 Puzzle Complete!');
+              } else {
+                lockRow = currentStep % 2 === 0 ? row : null;
+                lockCol = currentStep % 2 === 1 ? col : null;
+                updateHighlights();
+              }
+            } else {
+              alert('Wrong symbol! Game reset.');
+              restartGame();
+              return;
+            }
+          }
+        });
+      });
+    }
+
+    function startTimer(seconds) {
+      timeLeft = seconds;
+      document.getElementById('timer').textContent = timeLeft;
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        document.getElementById('timer').textContent = timeLeft;
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          alert("⏰ Time's up! Game reset.");
+          restartGame();
+        }
+      }, 1000);
+    }
+
+    function restartGame() {
+      currentStep = 0;
+      lockRow = 0;
+      lockCol = null;
+      const timeInput = document.getElementById('timeLimit');
+      const newTime = parseInt(timeInput.value);
+      generateTargetSequence();
+      createGrid();
+      startTimer(newTime);
+    }
+
+    window.onload = () => {
+      restartGame();
+    };
+  </script>
+</body>
+</html>
